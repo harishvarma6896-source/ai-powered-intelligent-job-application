@@ -50,3 +50,9 @@ secrets.yml
 
 # ===== Database dumps =====
 *.sql.bak
+
+# ===== Portable Maven & Local Data =====
+/maven/
+/data/
+/backend/data/
+

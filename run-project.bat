@@ -5,9 +5,23 @@ echo       AI-Powered Intelligent Job Application Assistant
 echo ========================================================
 echo.
 
-rem Ask for MySQL password to prevent connection errors
-set /p DB_PASS="Enter your MySQL Root Password: "
-set MYSQL_PASSWORD=%DB_PASS%
+echo Choose your database option:
+echo [1] Run MySQL database via Docker Compose (Recommended - Zero Setup)
+echo [2] Use a locally installed MySQL instance
+echo.
+set DB_CHOICE=1
+set /p DB_CHOICE="Enter choice [1 or 2, default is 1]: "
+
+if "%DB_CHOICE%"=="2" (
+    set /p DB_PASS="Enter your local MySQL Root Password: "
+    set MYSQL_PASSWORD=%DB_PASS%
+) else (
+    echo.
+    echo Starting MySQL database via Docker Compose...
+    docker compose up -d
+    set MYSQL_PASSWORD=1234
+    echo Database container started successfully!
+)
 
 echo.
 echo [1/3] Launching Spring Boot Backend...
