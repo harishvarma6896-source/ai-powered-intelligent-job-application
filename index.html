@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Job Application Assistant</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg-primary: #0d0d1a;
+      --bg-secondary: #12122a;
+      --bg-tertiary: #1a1a35;
+      --glass-bg: rgba(255,255,255,0.04);
+      --glass-border: rgba(255,255,255,0.08);
+      --accent-primary: #8b5cf6;
+      --accent-secondary: #ec4899;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --info: #3b82f6;
+      --sidebar-width: 260px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background:
+        radial-gradient(circle at 15% 25%, rgba(139,92,246,0.12) 0%, transparent 45%),
+        radial-gradient(circle at 85% 75%, rgba(236,72,153,0.10) 0%, transparent 45%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ---- AUTH PAGES ---- */
+    .auth-page {
+      position: fixed; inset: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--bg-primary);
+    }
+    .auth-card {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(20px);
+      border-radius: 20px;
+      padding: 44px 36px;
+      width: 420px;
+      position: relative;
+      z-index: 1;
+    }
+    .auth-logo {
+      width: 56px; height: 56px; border-radius: 16px;
+      background: linear-gradient(135deg, #8b5cf6, #ec4899);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px;
+    }
+    .auth-card h2 { text-align: center; font-size: 24px; font-weight: 800; }
+    .auth-card p.sub { text-align: center; color: var(--text-secondary); font-size: 14px; margin-top: 6px; margin-bottom: 28px; }
+
+    /* ---- FORM INPUTS ---- */
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .5px; }
+    .form-control {
+      width: 100%; padding: 10px 14px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--glass-border);
+      border-radius: 10px; color: var(--text-primary);
+      font-family: inherit; font-size: 14px; outline: none; transition: border .2s;
+    }
+    .form-control:focus { border-color: var(--accent-primary); }
+    .form-control::placeholder { color: var(--text-muted); }
+    select.form-control option { background: var(--bg-secondary); }
+    textarea.form-control { resize: vertical; min-height: 80px; }
+
+    /* ---- BUTTONS ---- */
+    .btn-primary {
+      width: 100%; padding: 12px;
+      background: linear-gradient(135deg, #8b5cf6, #ec4899);
+      border: none; border-radius: 12px;
+      color: #fff; font-family: inherit; font-size: 15px; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: opacity .2s, transform .1s;
+    }
+    .btn-primary:hover { opacity: .9; transform: translateY(-1px); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-sm {
+      padding: 6px 14px; border-radius: 8px; border: none; cursor: pointer;
+      font-family: inherit; font-size: 12px; font-weight: 600;
+    }
+    .btn-glass {
+      background: rgba(255,255,255,0.06); border: 1px solid var(--glass-border);
+      color: var(--text-primary);
+    }
+    .btn-glass:hover { background: rgba(255,255,255,0.10); }
+    .btn-danger { background: rgba(239,68,68,.15); color: var(--danger); }
+    .btn-success { background: rgba(16,185,129,.15); color: var(--success); }
+
+    /* ---- LAYOUT ---- */
+    .app-layout { display: flex; min-height: 100vh; position: relative; z-index: 1; }
+
+    /* ---- SIDEBAR ---- */
+    .sidebar {
+      width: var(--sidebar-width); background: var(--bg-secondary);
+      border-right: 1px solid var(--glass-border);
+      display: flex; flex-direction: column;
+      position: fixed; top: 0; left: 0; bottom: 0; z-index: 50;
+      overflow-y: auto;
+    }
+    .sidebar-brand {
+      padding: 24px 20px 20px;
+      border-bottom: 1px solid var(--glass-border);
+    }
+    .sidebar-brand h1 {
+      font-size: 16px; font-weight: 800;
+      background: linear-gradient(135deg, #8b5cf6, #ec4899);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .sidebar-brand small { font-size: 11px; color: var(--text-muted); }
+    .sidebar-profile { padding: 20px; border-bottom: 1px solid var(--glass-border); }
+    .avatar {
+      width: 48px; height: 48px; border-radius: 14px;
+      background: linear-gradient(135deg, #8b5cf6, #ec4899);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 18px; color: #fff; flex-shrink: 0;
+    }
+    .sidebar-profile .name { font-weight: 700; font-size: 14px; margin-top: 10px; }
+    .sidebar-profile .role { font-size: 12px; color: var(--text-muted); }
+    .progress-ring { margin-top: 14px; }
+    .progress-bar-bg { height: 6px; background: rgba(255,255,255,0.06); border-radius: 99px; overflow: hidden; }
+    .progress-bar-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, #8b5cf6, #ec4899); transition: width .5s; }
+    .sidebar-nav { padding: 12px 12px; flex: 1; }
+    .nav-section-label { font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; padding: 8px 8px 4px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: 10px; cursor: pointer;
+      color: var(--text-secondary); font-size: 13px; font-weight: 500;
+      transition: all .2s; margin-bottom: 2px;
+    }
+    .nav-item:hover { background: rgba(139,92,246,0.08); color: var(--text-primary); }
+    .nav-item.active { background: rgba(139,92,246,0.15); color: var(--accent-primary); font-weight: 700; }
+    .nav-item svg { flex-shrink: 0; }
+    .sidebar-footer { padding: 16px; border-top: 1px solid var(--glass-border); }
+
+    /* ---- MAIN CONTENT ---- */
+    .main-content {
+      margin-left: var(--sidebar-width);
+      flex: 1; padding: 32px;
+      min-height: 100vh;
+    }
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* ---- GLASS CARDS ---- */
+    .card {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 24px;
+      backdrop-filter: blur(10px);
+    }
+    .card h3 { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+
+    /* ---- GRID ---- */
+    .grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+    /* ---- KPI CARD ---- */
+    .kpi-card {
+      background: var(--glass-bg); border: 1px solid var(--glass-border);
+      border-radius: 16px; padding: 20px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .kpi-card .label { font-size: 12px; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+    .kpi-card .value { font-size: 28px; font-weight: 800; margin-top: 6px; }
+    .kpi-icon {
+      width: 48px; height: 48px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* ---- BADGE ---- */
+    .badge {
+      display: inline-flex; align-items: center;
+      padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 700;
+    }
+    .badge-success { background: rgba(16,185,129,.15); color: var(--success); }
+    .badge-warning { background: rgba(245,158,11,.15); color: var(--warning); }
+    .badge-danger { background: rgba(239,68,68,.15); color: var(--danger); }
+    .badge-info { background: rgba(59,130,246,.15); color: var(--info); }
+    .badge-purple { background: rgba(139,92,246,.15); color: var(--accent-primary); }
+
+    /* ---- ALERT ---- */
+    .alert { padding: 12px 16px; border-radius: 10px; font-size: 13px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .alert-danger { background: rgba(239,68,68,.1); color: var(--danger); }
+    .alert-success { background: rgba(16,185,129,.1); color: var(--success); }
+    .alert-warning { background: rgba(245,158,11,.1); color: var(--warning); }
+    .hidden { display: none !important; }
+
+    /* ---- KANBAN ---- */
+    .kanban-board { display: flex; gap: 16px; overflow-x: auto; padding-bottom: 16px; }
+    .kanban-col {
+      min-width: 220px; max-width: 220px;
+      background: var(--glass-bg); border: 1px solid var(--glass-border);
+      border-radius: 14px; padding: 14px;
+    }
+    .kanban-col-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--text-secondary); margin-bottom: 12px; display: flex; justify-content: space-between; }
+    .kanban-card {
+      background: var(--bg-tertiary); border: 1px solid var(--glass-border);
+      border-radius: 10px; padding: 12px; margin-bottom: 10px;
+      cursor: pointer; transition: transform .2s;
+    }
+    .kanban-card:hover { transform: translateY(-2px); }
+    .kanban-card .company { font-weight: 700; font-size: 13px; }
+    .kanban-card .position { font-size: 12px; color: var(--text-secondary); margin-top: 3px; }
+    .kanban-card .date { font-size: 11px; color: var(--text-muted); margin-top: 8px; }
+
+    /* ---- INTERVIEW PREP ---- */
+    .question-card {
+      background: var(--glass-bg); border: 1px solid var(--glass-border);
+      border-radius: 12px; padding: 16px; margin-bottom: 12px;
+      border-left: 3px solid var(--accent-primary);
+    }
+    .question-card .q-type { font-size: 11px; color: var(--accent-secondary); font-weight: 700; text-transform: uppercase; margin-bottom: 6px; }
+    .question-card .q-text { font-size: 14px; font-weight: 600; line-height: 1.5; }
+    details summary { cursor: pointer; font-size: 12px; color: var(--text-secondary); margin-top: 10px; }
+    details p { background: rgba(255,255,255,0.02); border-radius: 8px; padding: 10px; font-size: 13px; color: var(--text-secondary); margin-top: 8px; line-height: 1.6; }
+
+    /* ---- TIMELINE ---- */
+    .timeline-item { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--glass-border); }
+    .timeline-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-primary); flex-shrink: 0; margin-top: 5px; }
+
+    /* ---- SKILL CHIPS ---- */
+    .skill-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(139,92,246,.1); border: 1px solid rgba(139,92,246,.25);
+      border-radius: 8px; padding: 4px 10px; font-size: 12px; font-weight: 500; margin: 4px;
+    }
+    .skill-chip .remove { cursor: pointer; color: var(--danger); font-size: 14px; line-height: 1; }
+
+    /* ---- PAGE HEADERS ---- */
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; flex-wrap: wrap; gap: 12px; }
+    .page-header h2 { font-size: 22px; font-weight: 800; }
+    .page-header p { font-size: 14px; color: var(--text-secondary); margin-top: 4px; }
+
+    /* ---- ATS METER ---- */
+    .ats-meter { position: relative; width: 100px; height: 100px; }
+    .ats-meter svg { transform: rotate(-90deg); }
+    .ats-meter .ats-text { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; }
+
+    /* ---- RESPONSIVE ---- */
+    @media(max-width:900px){
+      .sidebar { transform: translateX(-100%); }
+      .main-content { margin-left: 0; padding: 20px; }
+      .grid-4 { grid-template-columns: 1fr 1fr; }
+      .grid-3 { grid-template-columns: 1fr 1fr; }
+    }
+    @media(max-width:600px){
+      .grid-4,.grid-2,.grid-3 { grid-template-columns: 1fr; }
+    }
+
+    /* ---- SCROLLBAR ---- */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 99px; }
+  </style>
+</head>
+<body>
+
+<!-- ======================== LOGIN PAGE ======================== -->
+<div class="auth-page" id="loginPage">
+  <div style="position:fixed;inset:0;background:radial-gradient(circle at 20% 30%,rgba(139,92,246,.18) 0,transparent 50%),radial-gradient(circle at 80% 70%,rgba(236,72,153,.15) 0,transparent 50%)"></div>
+  <div class="auth-card">
+    <div class="auth-logo">
+      <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+    </div>
+    <h2>Welcome Back</h2>
+    <p class="sub">Sign in to your intelligent career assistant</p>
+    <div id="loginError" class="alert alert-danger hidden"></div>
+    <div class="form-group"><label>Username or Email</label><input class="form-control" id="loginUser" placeholder="e.g. john_doe" value="john_doe"/></div>
+    <div class="form-group"><label>Password</label><input type="password" class="form-control" id="loginPass" placeholder="••••••••" value="password"/></div>
+    <button class="btn-primary" style="margin-top:8px" onclick="doLogin()">
+      Sign In <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+    </button>
+    <p style="text-align:center;margin-top:20px;font-size:13px;color:var(--text-secondary)">
+      No account? <a href="#" onclick="showPage('registerPage')" style="color:var(--accent-primary);font-weight:700">Sign Up</a>
+    </p>
+  </div>
+</div>
+
+<!-- ======================== REGISTER PAGE ======================== -->
+<div class="auth-page hidden" id="registerPage">
+  <div style="position:fixed;inset:0;background:radial-gradient(circle at 20% 30%,rgba(139,92,246,.18) 0,transparent 50%),radial-gradient(circle at 80% 70%,rgba(236,72,153,.15) 0,transparent 50%)"></div>
+  <div class="auth-card">
+    <div class="auth-logo">
+      <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+    </div>
+    <h2>Create Account</h2>
+    <p class="sub">Join the intelligent career platform</p>
+    <div id="regMsg" class="hidden"></div>
+    <div class="grid-2" style="gap:12px;margin-bottom:12px">
+      <div class="form-group" style="margin:0"><label>Full Name</label><input class="form-control" id="regName" placeholder="John Doe"/></div>
+      <div class="form-group" style="margin:0"><label>Username</label><input class="form-control" id="regUser" placeholder="john_doe"/></div>
+    </div>
+    <div class="form-group"><label>Email Address</label><input type="email" class="form-control" id="regEmail" placeholder="john@example.com"/></div>
+    <div class="form-group"><label>Password (min. 6 chars)</label><input type="password" class="form-control" id="regPass" placeholder="••••••••"/></div>
+    <button class="btn-primary" onclick="doRegister()">Create Account</button>
+    <p style="text-align:center;margin-top:20px;font-size:13px;color:var(--text-secondary)">
+      Already registered? <a href="#" onclick="showPage('loginPage')" style="color:var(--accent-primary);font-weight:700">Sign In</a>
+    </p>
+  </div>
+</div>
+
+<!-- ======================== APP LAYOUT ======================== -->
+<div class="app-layout hidden" id="appLayout">
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sidebar-brand">
+      <h1>AssistAI</h1>
+      <small>Intelligent Career Platform</small>
+    </div>
+    <div class="sidebar-profile">
+      <div class="avatar" id="sidebarAvatar">J</div>
+      <div class="name" id="sidebarName">John Doe</div>
+      <div class="role" id="sidebarRole">Senior Java Developer</div>
+      <div class="progress-ring" style="margin-top:14px">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:5px">
+          <span>Profile Strength</span><span id="profilePct">78%</span>
+        </div>
+        <div class="progress-bar-bg"><div class="progress-bar-fill" id="profileBar" style="width:78%"></div></div>
+      </div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <div class="nav-item active" onclick="navigate('dashboard')">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        Dashboard
+      </div>
+      <div class="nav-item" onclick="navigate('profile')">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+        Profile Builder
+      </div>
+      <div class="nav-section-label" style="margin-top:12px">AI Tools</div>
+      <div class="nav-item" onclick="navigate('resume')">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        AI Resume Builder
+      </div>
+      <div class="nav-item" onclick="navigate('coverletter')">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+        Cover Letters
+      </div>
+      <div class="nav-item" onclick="navigate('jdanalyzer')">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        JD Analyzer
+      </div>
+      <div class="nav-section-label" style="margin-top:12px">Tracking</div>
+      <div class="nav-item" onclick="navigate('tracker')">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        Job Tracker
+      </div>
+      <div class="nav-item" onclick="navigate('interview')">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+        Interview Prep
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="nav-item" onclick="doLogout()">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        Sign Out
+      </div>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <div class="main-content">
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <div><h2>Good day, <span id="dashName">John</span>! 👋</h2><p>Here's your career progress at a glance.</p></div>
+        <span class="badge badge-success">● All Systems Active</span>
+      </div>
+      <div class="grid-4" style="margin-bottom:24px">
+        <div class="kpi-card">
+          <div><div class="label">Profile Strength</div><div class="value" style="color:var(--accent-primary)">78%</div></div>
+          <div class="kpi-icon" style="background:rgba(139,92,246,.1)">
+            <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#8b5cf6" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div><div class="label">ATS Score</div><div class="value" style="color:var(--accent-secondary)">85%</div></div>
+          <div class="kpi-icon" style="background:rgba(236,72,153,.1)">
+            <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#ec4899" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div><div class="label">Applications</div><div class="value" style="color:var(--info)">24</div></div>
+          <div class="kpi-icon" style="background:rgba(59,130,246,.1)">
+            <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#3b82f6" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div><div class="label">Interviews</div><div class="value" style="color:var(--success)">3</div></div>
+          <div class="kpi-icon" style="background:rgba(16,185,129,.1)">
+            <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#10b981" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          </div>
+        </div>
+      </div>
+      <div class="grid-2" style="margin-bottom:24px">
+        <div class="card"><h3>Application Funnel</h3><canvas id="funnelChart" height="200"></canvas></div>
+        <div class="card">
+          <h3>⚡ AI Suggestions</h3>
+          <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
+            <div style="padding:10px 12px;border-left:3px solid var(--accent-primary);background:rgba(139,92,246,.05);border-radius:0 8px 8px 0;font-size:13px">Add Kubernetes certification to boost cloud-role ATS by ~12%</div>
+            <div style="padding:10px 12px;border-left:3px solid var(--accent-secondary);background:rgba(236,72,153,.05);border-radius:0 8px 8px 0;font-size:13px">Update your LinkedIn summary — it's missing key impact metrics</div>
+            <div style="padding:10px 12px;border-left:3px solid var(--info);background:rgba(59,130,246,.05);border-radius:0 8px 8px 0;font-size:13px">Your resume gaps from 2022–2023 may raise recruiter flags</div>
+          </div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <h3>🔔 Notifications</h3>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div class="timeline-item"><div class="timeline-dot"></div><div><div style="font-size:13px;font-weight:600">Interview at Google scheduled</div><div style="font-size:11px;color:var(--text-muted)">Today, 9:00 AM</div></div></div>
+            <div class="timeline-item"><div class="timeline-dot" style="background:var(--warning)"></div><div><div style="font-size:13px;font-weight:600">Resume ATS score updated</div><div style="font-size:11px;color:var(--text-muted)">Yesterday</div></div></div>
+            <div class="timeline-item"><div class="timeline-dot" style="background:var(--success)"></div><div><div style="font-size:13px;font-weight:600">Netflix application accepted</div><div style="font-size:11px;color:var(--text-muted)">2 days ago</div></div></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>📋 Activity Timeline</h3>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div class="timeline-item"><div class="timeline-dot"></div><div><div style="font-size:13px;font-weight:600">Applied: Senior Java Dev at Google</div><div style="font-size:11px;color:var(--text-muted)">2 hours ago</div></div></div>
+            <div class="timeline-item"><div class="timeline-dot" style="background:var(--accent-secondary)"></div><div><div style="font-size:13px;font-weight:600">Resume Generated: Modern Template</div><div style="font-size:11px;color:var(--text-muted)">5 hours ago</div></div></div>
+            <div class="timeline-item"><div class="timeline-dot" style="background:var(--success)"></div><div><div style="font-size:13px;font-weight:600">JD Analyzed: Netflix Backend Role</div><div style="font-size:11px;color:var(--text-muted)">Yesterday</div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROFILE BUILDER -->
+    <div class="page" id="page-profile">
+      <div class="page-header"><div><h2>Profile Builder</h2><p>Update your professional information to improve match scores.</p></div></div>
+      <div class="card" style="margin-bottom:24px">
+        <h3>Personal Details</h3>
+        <div class="grid-2" style="gap:14px">
+          <div class="form-group"><label>Full Name</label><input class="form-control" value="John Doe"/></div>
+          <div class="form-group"><label>Professional Title</label><input class="form-control" value="Senior Java Developer"/></div>
+          <div class="form-group"><label>Location</label><input class="form-control" value="San Francisco, CA"/></div>
+          <div class="form-group"><label>Phone</label><input class="form-control" value="+1 555-0199"/></div>
+          <div class="form-group"><label>LinkedIn</label><input class="form-control" value="linkedin.com/in/johndoe"/></div>
+          <div class="form-group"><label>GitHub</label><input class="form-control" value="github.com/johndoe"/></div>
+          <div class="form-group" style="grid-column:1/-1"><label>Bio / Professional Summary</label><textarea class="form-control" rows="3">Experienced Java developer with 8+ years building scalable microservices. Passionate about cloud-native architecture and performance optimization.</textarea></div>
+        </div>
+        <button class="btn-primary" style="width:auto;padding:10px 28px;margin-top:8px" onclick="showToast('Profile saved successfully!')">Save Profile</button>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Skills</h3>
+          <div style="display:flex;gap:8px;margin-bottom:14px">
+            <input class="form-control" id="newSkill" placeholder="e.g. Kubernetes" style="flex:1"/>
+            <button class="btn-sm btn-glass" onclick="addSkill()">+ Add</button>
+          </div>
+          <div id="skillsContainer">
+            <span class="skill-chip">Java <span class="remove" onclick="this.parentElement.remove()">×</span></span>
+            <span class="skill-chip">Spring Boot <span class="remove" onclick="this.parentElement.remove()">×</span></span>
+            <span class="skill-chip">React <span class="remove" onclick="this.parentElement.remove()">×</span></span>
+            <span class="skill-chip">Docker <span class="remove" onclick="this.parentElement.remove()">×</span></span>
+            <span class="skill-chip">AWS <span class="remove" onclick="this.parentElement.remove()">×</span></span>
+            <span class="skill-chip">MySQL <span class="remove" onclick="this.parentElement.remove()">×</span></span>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Experience</h3>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="padding:12px;background:rgba(255,255,255,.02);border-radius:10px;border:1px solid var(--glass-border)">
+              <div style="font-weight:700;font-size:14px">Senior Java Developer</div>
+              <div style="font-size:12px;color:var(--accent-primary)">Google LLC</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Jan 2021 – Present</div>
+            </div>
+            <div style="padding:12px;background:rgba(255,255,255,.02);border-radius:10px;border:1px solid var(--glass-border)">
+              <div style="font-weight:700;font-size:14px">Backend Engineer</div>
+              <div style="font-size:12px;color:var(--accent-secondary)">Netflix</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Mar 2018 – Dec 2020</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI RESUME BUILDER -->
+    <div class="page" id="page-resume">
+      <div class="page-header">
+        <div><h2>AI Resume Builder</h2><p>Generate ATS-optimized resumes with AI assistance.</p></div>
+        <button class="btn-primary" style="width:auto;padding:10px 24px" onclick="generateResume()">✨ Generate AI Resume</button>
+      </div>
+      <div class="grid-2">
+        <div>
+          <div class="card" style="margin-bottom:16px">
+            <h3>Resume Versions</h3>
+            <div id="resumeList" style="display:flex;flex-direction:column;gap:10px">
+              <div style="padding:12px;background:rgba(139,92,246,.06);border:1px solid var(--accent-primary);border-radius:10px">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <span style="font-weight:700;font-size:13px">Modern Elegant v1</span>
+                  <span class="badge badge-purple">Active</span>
+                </div>
+                <div style="font-size:12px;color:var(--text-secondary);margin-top:6px">ATS Score: <strong>85%</strong></div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Template</h3>
+            <select class="form-control" id="templateSelect">
+              <option>Modern Elegant</option>
+              <option>Professional Executive</option>
+              <option>Creative Tech</option>
+            </select>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Live Preview</h3>
+          <div id="resumePreview" style="padding:20px;background:rgba(255,255,255,.01);border:1px solid var(--glass-border);border-radius:10px;font-family:serif;line-height:1.7;min-height:380px">
+            <h2 style="font-size:20px;border-bottom:2px solid #8b5cf6;padding-bottom:8px;margin-bottom:14px">John Doe</h2>
+            <p style="font-size:13px;color:#94a3b8">Senior Java Developer | San Francisco, CA | john@example.com</p>
+            <h3 style="margin-top:16px;font-size:14px;text-transform:uppercase;letter-spacing:1px;color:#8b5cf6">Summary</h3>
+            <p style="font-size:13px;margin-top:6px">Experienced Java developer with 8+ years building scalable microservices and cloud-native solutions. Strong expertise in Spring Boot, Docker, and AWS.</p>
+            <h3 style="margin-top:16px;font-size:14px;text-transform:uppercase;letter-spacing:1px;color:#8b5cf6">Experience</h3>
+            <div style="margin-top:8px;font-size:13px"><strong>Senior Java Developer — Google LLC</strong><br/><span style="color:#94a3b8">Jan 2021 – Present</span><br/>• Designed microservices handling 2M+ daily requests<br/>• Reduced API latency by 40% via caching optimization</div>
+            <h3 style="margin-top:16px;font-size:14px;text-transform:uppercase;letter-spacing:1px;color:#8b5cf6">Skills</h3>
+            <p style="font-size:13px;margin-top:6px">Java · Spring Boot · React · Docker · AWS · MySQL · Kubernetes</p>
+          </div>
+          <button class="btn-sm btn-glass" style="margin-top:12px;width:100%" onclick="window.print()">🖨️ Print / Save as PDF</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- COVER LETTERS -->
+    <div class="page" id="page-coverletter">
+      <div class="page-header"><div><h2>AI Cover Letter Generator</h2><p>Create tailored cover letters for each application.</p></div></div>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Letter Details</h3>
+          <div class="form-group"><label>Target Company</label><input class="form-control" id="clCompany" placeholder="e.g. Google"/></div>
+          <div class="form-group"><label>Job Title</label><input class="form-control" id="clTitle" placeholder="e.g. Senior Backend Engineer"/></div>
+          <div class="form-group"><label>Tone</label>
+            <select class="form-control" id="clTone">
+              <option>Professional</option><option>Formal</option><option>Friendly</option><option>Experienced</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Job Description (paste here)</label><textarea class="form-control" id="clJD" rows="5" placeholder="Paste the full job description to personalize the letter..."></textarea></div>
+          <button class="btn-primary" onclick="generateCoverLetter()">✨ Write Cover Letter</button>
+        </div>
+        <div class="card">
+          <h3>Generated Letter</h3>
+          <div id="clOutput" style="padding:20px;background:rgba(255,255,255,.01);border:1px solid var(--glass-border);border-radius:10px;font-family:serif;line-height:1.8;min-height:380px;font-size:14px;color:var(--text-secondary)">
+            Your AI-generated cover letter will appear here. Fill in the details on the left and click <strong>Write Cover Letter</strong>.
+          </div>
+          <button class="btn-sm btn-glass" style="margin-top:10px;width:100%" onclick="copyCL()">📋 Copy to Clipboard</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- JD ANALYZER -->
+    <div class="page" id="page-jdanalyzer">
+      <div class="page-header"><div><h2>JD Analyzer</h2><p>Analyze any job description for ATS compatibility and keyword gaps.</p></div></div>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Job Description</h3>
+          <div class="form-group"><label>Job Title</label><input class="form-control" id="jdTitle" placeholder="e.g. Lead Java Developer"/></div>
+          <div class="form-group"><label>Company</label><input class="form-control" id="jdCompany" placeholder="e.g. Amazon"/></div>
+          <div class="form-group"><label>Paste Full JD Text</label><textarea class="form-control" id="jdText" rows="10" placeholder="Paste the complete job description here to analyze keyword match, required skills, and compatibility score..."></textarea></div>
+          <button class="btn-primary" onclick="analyzeJD()">🔍 Analyze Compatibility</button>
+        </div>
+        <div id="jdResults" style="display:flex;flex-direction:column;gap:16px">
+          <div class="card" style="text-align:center;padding:60px 24px">
+            <div style="font-size:48px;margin-bottom:12px">📊</div>
+            <h3 style="color:var(--text-secondary)">Awaiting Analysis</h3>
+            <p style="font-size:13px;color:var(--text-muted);margin-top:8px">Paste a job description and click Analyze to see your ATS score and keyword gaps.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- JOB TRACKER -->
+    <div class="page" id="page-tracker">
+      <div class="page-header">
+        <div><h2>Job Application Tracker</h2><p>Manage your applications through the hiring funnel.</p></div>
+        <button class="btn-primary" style="width:auto;padding:10px 20px" onclick="showAddCard()">+ Add Job Card</button>
+      </div>
+      <div class="kanban-board" id="kanbanBoard"></div>
+    </div>
+
+    <!-- INTERVIEW PREP -->
+    <div class="page" id="page-interview">
+      <div class="page-header"><div><h2>Interview Preparation</h2><p>AI-curated questions tailored to your target roles.</p></div></div>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Generate Questions</h3>
+          <div class="form-group"><label>Job Title</label><input class="form-control" id="ipTitle" placeholder="e.g. Java Backend Engineer"/></div>
+          <div class="form-group"><label>Company</label><input class="form-control" id="ipCompany" placeholder="e.g. Amazon"/></div>
+          <div class="form-group"><label>Focus Area (optional)</label><textarea class="form-control" id="ipJD" rows="4" placeholder="Paste specific JD duties to customize questions..."></textarea></div>
+          <button class="btn-primary" onclick="generateQuestions()">✨ Generate Questions</button>
+        </div>
+        <div id="questionsContainer">
+          <div style="display:flex;flex-direction:column;gap:12px" id="questionsList">
+            <!-- Default questions shown on load -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end main-content -->
+</div><!-- end app-layout -->
+
+<!-- TOAST NOTIFICATION -->
+<div id="toast" style="position:fixed;bottom:28px;right:28px;background:linear-gradient(135deg,#8b5cf6,#ec4899);color:#fff;padding:12px 20px;border-radius:12px;font-size:14px;font-weight:600;z-index:9999;opacity:0;transform:translateY(20px);transition:all .3s;pointer-events:none"></div>
+
+<!-- ADD CARD MODAL -->
+<div id="addCardModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:200;display:none;align-items:center;justify-content:center">
+  <div class="auth-card" style="width:480px;max-height:90vh;overflow-y:auto">
+    <h2 style="font-size:18px;margin-bottom:20px">Add Job Card</h2>
+    <div class="grid-2" style="gap:12px">
+      <div class="form-group" style="margin:0"><label>Company</label><input class="form-control" id="cardCompany" placeholder="e.g. Google"/></div>
+      <div class="form-group" style="margin:0"><label>Job Title</label><input class="form-control" id="cardTitle" placeholder="e.g. SWE II"/></div>
+    </div>
+    <div class="grid-2" style="gap:12px;margin-top:12px">
+      <div class="form-group" style="margin:0"><label>Location</label><input class="form-control" id="cardLoc" placeholder="Remote"/></div>
+      <div class="form-group" style="margin:0"><label>Status</label>
+        <select class="form-control" id="cardStatus">
+          <option>Applied</option><option>Assessment</option><option>Interview</option><option>Offer Received</option><option>Rejected</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group" style="margin-top:12px"><label>Applied Date</label><input type="date" class="form-control" id="cardDate"/></div>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button class="btn-sm btn-glass" style="flex:1;padding:10px" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" style="flex:2;padding:10px" onclick="saveCard()">Save Card</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===================== STATE =====================
+const USERS = [
+  { username:'john_doe', email:'john.doe@example.com', password:'password', name:'John Doe', role:'Senior Java Developer', initials:'J' },
+  { username:'admin',    email:'admin@jobassistant.com', password:'password', name:'Admin User', role:'System Administrator', initials:'A' }
+];
+
+let currentUser = null;
+let kanbanData = {
+  Applied:       [{ company:'Google',   title:'Senior Java Dev',     loc:'Mountain View', date:'2026-07-10' }],
+  Assessment:    [{ company:'Netflix',  title:'Backend Engineer',    loc:'Remote',        date:'2026-07-08' }],
+  Interview:     [{ company:'Amazon',   title:'Software Engineer II',loc:'Seattle, WA',   date:'2026-07-05' }],
+  'Offer Received': [],
+  Rejected:      [{ company:'Microsoft',title:'Cloud Developer',     loc:'Redmond, WA',   date:'2026-07-01' }]
+};
+
+const QUESTIONS = [
+  { type:'Technical', q:'Explain how Java handles memory management and garbage collection.', hint:'Discuss heap/stack allocation, GC algorithms (G1, ZGC), and when to tune JVM parameters.' },
+  { type:'Technical', q:'What are the key differences between REST and GraphQL APIs?', hint:'Cover protocol flexibility, over/under fetching, schema introspection, and use cases for each.' },
+  { type:'System Design', q:'Design a URL shortening service like bit.ly that handles 1 million requests/day.', hint:'Discuss hashing, database choice (SQL vs NoSQL), caching with Redis, load balancers, and CDN.' },
+  { type:'Behavioral', q:'Describe a time you disagreed with a team decision. How did you handle it?', hint:'Use STAR method — Situation, Task, Action, Result. Emphasize collaboration and data-driven reasoning.' },
+  { type:'Technical', q:'How does Spring Boot\'s auto-configuration mechanism work?', hint:'Explain @SpringBootApplication, @EnableAutoConfiguration, conditional annotations, and spring.factories.' },
+  { type:'Behavioral', q:'Tell me about a project where you significantly improved system performance.', hint:'Quantify results: e.g. "reduced p99 latency from 800ms to 120ms by introducing Redis caching."' },
+];
+
+// ===================== AUTH =====================
+function doLogin() {
+  const u = document.getElementById('loginUser').value.trim();
+  const p = document.getElementById('loginPass').value;
+  const err = document.getElementById('loginError');
+  const found = USERS.find(x => (x.username === u || x.email === u) && x.password === p);
+  if (!found) { err.textContent = 'Invalid credentials. Try john_doe / password'; err.classList.remove('hidden'); return; }
+  err.classList.add('hidden');
+  currentUser = found;
+  document.getElementById('sidebarName').textContent = found.name;
+  document.getElementById('sidebarRole').textContent = found.role;
+  document.getElementById('sidebarAvatar').textContent = found.initials;
+  document.getElementById('dashName').textContent = found.name.split(' ')[0];
+  document.getElementById('loginPage').classList.add('hidden');
+  document.getElementById('appLayout').classList.remove('hidden');
+  initCharts();
+  renderKanban();
+  renderDefaultQuestions();
+}
+
+function doRegister() {
+  const name = document.getElementById('regName').value.trim();
+  const user = document.getElementById('regUser').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const pass = document.getElementById('regPass').value;
+  const msg = document.getElementById('regMsg');
+  if (!name || !user || !email || !pass) { showMsg(msg,'Please fill in all fields.','danger'); return; }
+  if (pass.length < 6) { showMsg(msg,'Password must be at least 6 characters.','danger'); return; }
+  USERS.push({ username:user, email, password:pass, name, role:'Job Seeker', initials:name[0].toUpperCase() });
+  showMsg(msg,'Account created! You can now sign in.','success');
+  setTimeout(() => showPage('loginPage'), 1500);
+}
+
+function doLogout() {
+  currentUser = null;
+  document.getElementById('appLayout').classList.add('hidden');
+  document.getElementById('loginPage').classList.remove('hidden');
+}
+
+function showMsg(el, text, type) {
+  el.textContent = text; el.className = `alert alert-${type}`; el.classList.remove('hidden');
+}
+
+// ===================== NAVIGATION =====================
+function showPage(id) {
+  document.querySelectorAll('.auth-page').forEach(p => p.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+}
+
+function navigate(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+}
+
+// ===================== CHARTS =====================
+function initCharts() {
+  const ctx = document.getElementById('funnelChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Offer/Selected', 'In Progress', 'Rejected'],
+      datasets: [{ data:[3,17,4], backgroundColor:['#10b981','#8b5cf6','#ef4444'], borderWidth:2, borderColor:'rgba(0,0,0,.3)' }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ labels:{ color:'#94a3b8', font:{ family:'Plus Jakarta Sans', size:12 } } } }
+    }
+  });
+}
+
+// ===================== SKILLS =====================
+function addSkill() {
+  const val = document.getElementById('newSkill').value.trim();
+  if (!val) return;
+  const chip = document.createElement('span');
+  chip.className = 'skill-chip';
+  chip.innerHTML = `${val} <span class="remove" onclick="this.parentElement.remove()">×</span>`;
+  document.getElementById('skillsContainer').appendChild(chip);
+  document.getElementById('newSkill').value = '';
+  showToast('Skill added: ' + val);
+}
+
+// ===================== RESUME =====================
+function generateResume() {
+  const tpl = document.getElementById('templateSelect').value;
+  showToast('AI generating ' + tpl + ' resume...');
+  setTimeout(() => {
+    document.getElementById('resumePreview').innerHTML = `
+      <h2 style="font-size:20px;border-bottom:2px solid #8b5cf6;padding-bottom:8px;margin-bottom:14px">John Doe</h2>
+      <p style="font-size:12px;color:#94a3b8">${currentUser.role} | San Francisco, CA | john@example.com | github.com/johndoe</p>
+      <h3 style="margin-top:16px;font-size:13px;text-transform:uppercase;letter-spacing:1px;color:#8b5cf6">Professional Summary</h3>
+      <p style="font-size:13px;margin-top:6px">Results-driven Java engineer with 8+ years building high-throughput microservices. Expertise in Spring Boot, Docker, and AWS. Proven record reducing latency by 40% and scaling systems to 2M+ daily requests.</p>
+      <h3 style="margin-top:16px;font-size:13px;text-transform:uppercase;letter-spacing:1px;color:#8b5cf6">Core Skills</h3>
+      <p style="font-size:13px;margin-top:6px">Java 21 · Spring Boot · React · Docker · AWS ECS · MySQL · Redis · Kubernetes · CI/CD</p>
+      <h3 style="margin-top:16px;font-size:13px;text-transform:uppercase;letter-spacing:1px;color:#8b5cf6">Experience</h3>
+      <div style="margin-top:8px;font-size:13px"><strong>Senior Java Developer — Google LLC</strong> (Jan 2021–Present)<br/>• Architected microservices handling 2M+ daily API requests with 99.9% uptime<br/>• Reduced P99 latency by 40% through Redis caching and async processing</div>
+      <div style="margin-top:10px;font-size:13px"><strong>Backend Engineer — Netflix</strong> (Mar 2018–Dec 2020)<br/>• Built streaming data pipelines processing 500K events/minute<br/>• Migrated monolith to 12 independent microservices (30% cost reduction)</div>
+      <h3 style="margin-top:16px;font-size:13px;text-transform:uppercase;letter-spacing:1px;color:#8b5cf6">Education</h3>
+      <div style="font-size:13px;margin-top:6px"><strong>B.S. Computer Science</strong> — Stanford University (2018)</div>
+    `;
+    const list = document.getElementById('resumeList');
+    const v = document.createElement('div');
+    v.style.cssText = 'padding:12px;background:rgba(255,255,255,.02);border:1px solid var(--glass-border);border-radius:10px;margin-bottom:8px';
+    v.innerHTML = `<div style="font-weight:700;font-size:13px">${tpl} v${list.children.length+1}</div><div style="font-size:12px;color:var(--text-secondary);margin-top:4px">ATS Score: <strong>88%</strong></div>`;
+    list.appendChild(v);
+    showToast('Resume generated with 88% ATS Score!');
+  }, 1200);
+}
+
+// ===================== COVER LETTER =====================
+function generateCoverLetter() {
+  const company = document.getElementById('clCompany').value || 'the company';
+  const title = document.getElementById('clTitle').value || 'the role';
+  const tone = document.getElementById('clTone').value;
+  if (!company || !title) { showToast('Please fill in Company and Job Title first.'); return; }
+  showToast('AI writing your cover letter...');
+  setTimeout(() => {
+    document.getElementById('clOutput').innerHTML = `
+      <p>Dear Hiring Manager,</p><br/>
+      <p>I am writing to express my strong interest in the <strong>${title}</strong> position at <strong>${company}</strong>. With over 8 years of experience in enterprise Java development and cloud-native architecture, I am confident that I can deliver immediate, measurable value to your engineering team.</p><br/>
+      <p>In my current role at Google, I have designed and scaled microservices handling over 2 million daily API requests with 99.9% uptime. I reduced P99 latency by 40% through strategic caching and asynchronous processing patterns — the same principles I would apply to accelerate delivery at ${company}.</p><br/>
+      <p>My core strengths include Java 21, Spring Boot, Docker, Kubernetes, and AWS — a stack I understand I will leverage daily in this role. I thrive in collaborative, fast-paced environments and believe in building systems that are not only performant but maintainable at scale.</p><br/>
+      <p>I am excited by ${company}'s engineering culture and would welcome the opportunity to discuss how my background aligns with your team's goals.</p><br/>
+      <p>Sincerely,<br/><strong>${currentUser ? currentUser.name : 'John Doe'}</strong></p>
+    `;
+    showToast('Cover letter generated!');
+  }, 1000);
+}
+
+function copyCL() {
+  const text = document.getElementById('clOutput').innerText;
+  navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard!'));
+}
+
+// ===================== JD ANALYZER =====================
+function analyzeJD() {
+  const jd = document.getElementById('jdText').value;
+  const title = document.getElementById('jdTitle').value || 'this role';
+  if (!jd) { showToast('Please paste a job description first.'); return; }
+  showToast('Analyzing job description...');
+  const mySkills = ['java','spring','react','docker','aws','mysql','git','microservices','rest','api'];
+  const words = jd.toLowerCase().split(/\s+/);
+  const required = ['kubernetes','typescript','graphql','terraform','kafka','golang','python','redis','nosql','mongodb'];
+  const missing = required.filter(r => words.includes(r) || jd.toLowerCase().includes(r));
+  if (missing.length === 0) missing.push('Kubernetes','GraphQL','Terraform');
+  const score = Math.min(92, 65 + mySkills.filter(s => jd.toLowerCase().includes(s)).length * 3);
+  setTimeout(() => {
+    document.getElementById('jdResults').innerHTML = `
+      <div class="grid-2" style="gap:14px">
+        <div class="card" style="text-align:center">
+          <div style="font-size:12px;color:var(--text-secondary);font-weight:600;margin-bottom:8px">ATS MATCH SCORE</div>
+          <div style="font-size:42px;font-weight:800;color:${score>=80?'#10b981':score>=60?'#f59e0b':'#ef4444'}">${score}%</div>
+        </div>
+        <div class="card" style="text-align:center">
+          <div style="font-size:12px;color:var(--text-secondary);font-weight:600;margin-bottom:8px">KEYWORD MATCH</div>
+          <div style="font-size:42px;font-weight:800;color:var(--accent-primary)">${score-5}%</div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>⚠️ Missing Keywords</h3>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">
+          ${missing.map(m=>`<span class="badge badge-danger" style="padding:5px 12px;font-size:12px">${m}</span>`).join('')}
+        </div>
+      </div>
+      <div class="card">
+        <h3>💡 Optimization Tips</h3>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
+          <div style="padding:10px 12px;border-left:3px solid var(--accent-primary);background:rgba(139,92,246,.04);border-radius:0 8px 8px 0;font-size:13px">Add ${missing[0]||'Docker Swarm'} to your skills section to match this JD requirement</div>
+          <div style="padding:10px 12px;border-left:3px solid var(--warning);background:rgba(245,158,11,.04);border-radius:0 8px 8px 0;font-size:13px">Quantify your impact metrics — this role emphasizes measurable outcomes</div>
+          <div style="padding:10px 12px;border-left:3px solid var(--info);background:rgba(59,130,246,.04);border-radius:0 8px 8px 0;font-size:13px">Your resume ATS score for <strong>${title}</strong> can reach 92%+ with these changes</div>
+        </div>
+      </div>
+    `;
+    showToast('Analysis complete! Score: ' + score + '%');
+  }, 1200);
+}
+
+// ===================== KANBAN =====================
+function renderKanban() {
+  const board = document.getElementById('kanbanBoard');
+  board.innerHTML = '';
+  const cols = ['Applied','Assessment','Interview','Offer Received','Rejected'];
+  const colColors = { Applied:'var(--info)', Assessment:'var(--warning)', Interview:'var(--accent-primary)', 'Offer Received':'var(--success)', Rejected:'var(--danger)' };
+  cols.forEach(col => {
+    const cards = kanbanData[col] || [];
+    const colEl = document.createElement('div');
+    colEl.className = 'kanban-col';
+    colEl.innerHTML = `<div class="kanban-col-title"><span style="color:${colColors[col]}">${col}</span><span class="badge badge-info">${cards.length}</span></div>`;
+    cards.forEach(c => {
+      const card = document.createElement('div');
+      card.className = 'kanban-card';
+      card.innerHTML = `<div class="company">${c.company}</div><div class="position">${c.title}</div><div class="date">📍 ${c.loc} &nbsp; 📅 ${c.date}</div>`;
+      colEl.appendChild(card);
+    });
+    board.appendChild(colEl);
+  });
+}
+
+function showAddCard() {
+  const modal = document.getElementById('addCardModal');
+  modal.style.display = 'flex';
+  document.getElementById('cardDate').value = new Date().toISOString().split('T')[0];
+}
+
+function closeModal() {
+  document.getElementById('addCardModal').style.display = 'none';
+}
+
+function saveCard() {
+  const company = document.getElementById('cardCompany').value.trim();
+  const title = document.getElementById('cardTitle').value.trim();
+  const loc = document.getElementById('cardLoc').value.trim() || 'Remote';
+  const status = document.getElementById('cardStatus').value;
+  const date = document.getElementById('cardDate').value;
+  if (!company || !title) { showToast('Company and Job Title are required.'); return; }
+  kanbanData[status].push({ company, title, loc, date });
+  renderKanban();
+  closeModal();
+  showToast('Job card added to ' + status + '!');
+  document.getElementById('cardCompany').value = '';
+  document.getElementById('cardTitle').value = '';
+  document.getElementById('cardLoc').value = '';
+}
+
+// ===================== INTERVIEW PREP =====================
+function renderDefaultQuestions() {
+  renderQuestions(QUESTIONS);
+}
+
+function generateQuestions() {
+  const title = document.getElementById('ipTitle').value || 'Software Engineer';
+  const company = document.getElementById('ipCompany').value || 'the company';
+  showToast('Generating interview questions for ' + title + '...');
+  setTimeout(() => {
+    const custom = [
+      { type:'Technical', q:`How would you design a scalable REST API at ${company} for ${title} responsibilities?`, hint:'Discuss REST principles, versioning, rate limiting, OAuth2 authentication, and pagination strategies.' },
+      { type:'Technical', q:`What challenges might arise when migrating ${company}'s monolith to microservices?`, hint:'Cover service discovery, distributed tracing, data consistency (SAGA pattern), and API gateway patterns.' },
+      { type:'Behavioral', q:`Why do you want to join ${company} as a ${title}?`, hint:'Research the company\'s culture, products, and engineering blog. Tie personal values to their mission.' },
+      ...QUESTIONS.slice(0, 3)
+    ];
+    renderQuestions(custom);
+    showToast('Questions generated!');
+  }, 1000);
+}
+
+function renderQuestions(questions) {
+  const container = document.getElementById('questionsList');
+  container.innerHTML = '';
+  questions.forEach(q => {
+    const el = document.createElement('div');
+    el.className = 'question-card';
+    el.innerHTML = `<div class="q-type">${q.type}</div><div class="q-text">${q.q}</div><details><summary>Reveal Answer Guide</summary><p>${q.hint}</p></details>`;
+    container.appendChild(el);
+  });
+}
+
+// ===================== TOAST =====================
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.opacity = '1';
+  t.style.transform = 'translateY(0)';
+  setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(20px)'; }, 3000);
+}
+
+// ===================== INIT =====================
+// Pre-fill today's date for add card
+window.onload = function() {
+  renderDefaultQuestions();
+};
+</script>
+</body>
+</html>

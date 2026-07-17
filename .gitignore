@@ -1,0 +1,52 @@
+# ===== Java / Maven =====
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# ===== Spring Boot =====
+*.log
+spring-boot-*.log
+/backend/logs/
+
+# ===== Node / React =====
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.env
+frontend/.env.local
+frontend/.env.production
+
+# ===== IDEs =====
+.idea/
+*.iml
+*.iws
+*.ipr
+.classpath
+.project
+.settings/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===== Secrets (NEVER commit) =====
+*.properties.local
+application-prod.properties
+secrets.yml
+
+# ===== Database dumps =====
+*.sql.bak
